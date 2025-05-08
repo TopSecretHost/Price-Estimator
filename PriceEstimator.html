@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Unity Game Development Quote Calculator</title>
+    <style>
+        /* Basic Reset */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .calculator {
+            background-color: #fff;
+            /* Control overall size and responsiveness */
+            width: 100%;
+            max-width: 750px;  /* Adjust as needed */
+            min-height: 600px; /* Ensures stable height */
+            border-radius: 10px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background-color: #007ACC;
+            color: #fff;
+            padding: 25px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+        }
+
+        .steps {
+            padding: 25px;
+            position: relative;
+            flex: 1;
+            overflow-y: auto; /* Allows vertical scroll if content grows too large */
+        }
+
+        .progress-bar {
+            display: flex;
+            margin-bottom: 20px;
+        }
+
+        .progress-step {
+            flex: 1;
+            height: 8px;
+            background-color: #e0e0e0;
+            margin-right: 5px;
+            border-radius: 4px;
+        }
+        .progress-step:last-child {
+            margin-right: 0;
+        }
+        .progress-step.active {
+            background-color: #007ACC;
+        }
+
+        .step {
+            display: none;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        .step.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {opacity: 0;}
+            to {opacity: 1;}
+        }
+
+        .navigation {
+            display: flex;
+            justify-content: space-between;
+            padding: 20px 25px;
+            background-color: #f7f7f7;
+        }
+
+        .navigation button {
+            padding: 10px 25px;
+            border: none;
+            background-color: #007ACC;
+            color: #fff;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        .navigation button:hover:not(:disabled) {
+            background-color: #005fa3;
+        }
+
+        .navigation button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        /* Input Styling */
+        .step label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .step select,
+        .step input[type="number"] {
+            width: 100%;
+            padding: 12px 15px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .step select:focus,
+        .step input[type="number"]:focus {
+            border-color: #007ACC;
+            outline: none;
+        }
+
+        /* Radio and Checkbox Styling */
+        .radio-group,
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .radio-group label,
+        .checkbox-group label {
+            margin-bottom: 12px;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+
+        .radio-group input,
+        .checkbox-group input {
+            margin-right: 10px;
+            transform: scale(1.2);
+            cursor: pointer;
+        }
+
+        /* Result Styling */
+        .result {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .result h2 {
+            margin-bottom: 25px;
+            color: #007ACC;
+            font-size: 22px;
+        }
+
+        .result p {
+            font-size: 20px;
+            margin-bottom: 30px;
+            color: #333;
+        }
+
+        .result .breakdown {
+            text-align: left;
+            max-width: 500px;
+            margin: 0 auto 30px auto;
+            font-size: 16px;
+            color: #555;
+        }
+
+        .result .breakdown table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .result .breakdown th,
+        .result .breakdown td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .result .breakdown th {
+            background-color: #f2f2f2;
+            text-align: left;
+            color: #333;
+        }
+
+        .result button {
+            padding: 10px 25px;
+            border: none;
+            background-color: #28a745;
+            color: #fff;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        .result button:hover {
+            background-color: #218838;
+        }
+
+        /* Responsive */
+        @media (max-width: 650px) {
+            .calculator {
+                max-width: 100%;
+                min-height: auto;
+            }
+
+            .header h1 {
+                font-size: 20px;
+            }
+
+            .navigation button,
+            .result button {
+                width: 45%;
+                padding: 10px 10px;
+                font-size: 14px;
+            }
+        }
+
+        /* Tooltip Styling */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+            color: #007ACC;
+            margin-left: 5px;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 220px;
+            background-color: #555;
+            color: #fff;
+            text-align: left;
+            border-radius: 6px;
+            padding: 10px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%; /* Position above the tooltip element */
+            left: 50%;
+            margin-left: -110px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .tooltip .tooltiptext::after {
+            content: "";
+            position: absolute;
+            top: 100%; /* At the bottom of the tooltip */
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #555 transparent transparent transparent;
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+
+<div class="calculator">
+    <div class="header">
+        <h1>Unity Game Development Quote Calculator</h1>
+    </div>
+    <div class="steps">
+        <!-- Progress Bar (6 steps total) -->
+        <div class="progress-bar">
+            <div class="progress-step active" id="progress-1"></div>
+            <div class="progress-step" id="progress-2"></div>
+            <div class="progress-step" id="progress-3"></div>
+            <div class="progress-step" id="progress-4"></div>
+            <div class="progress-step" id="progress-5"></div>
+            <div class="progress-step" id="progress-6"></div>
+        </div>
+
+        <!-- Step 1: Main Menu (2D or 3D) -->
+        <div class="step active" id="step-1">
+            <label>Select your game dimension:
+                <span class="tooltip">ℹ️
+                    <span class="tooltiptext">Choose whether you plan to develop a 2D or 3D game.</span>
+                </span>
+            </label>
+            <div class="radio-group">
+                <label><input type="radio" name="dimension" value="2d"> 2D Game</label>
+                <label><input type="radio" name="dimension" value="3d"> 3D Game</label>
+            </div>
+        </div>
+
+        <!-- Step 2: Platforms + Genre -->
+        <div class="step" id="step-2">
+            <label>Which platform(s) are you targeting?
+                <span class="tooltip">ℹ️
+                    <span class="tooltiptext">Select all the platforms you plan to release on.</span>
+                </span>
+            </label>
+            <div class="checkbox-group">
+                <label><input type="checkbox" name="platforms" value="ios"> iOS (Mobile)</label>
+                <label><input type="checkbox" name="platforms" value="android"> Android (Mobile)</label>
+                <label><input type="checkbox" name="platforms" value="windows"> Windows (PC)</label>
+                <label><input type="checkbox" name="platforms" value="macos"> macOS (PC)</label>
+                <label><input type="checkbox" name="platforms" value="linux"> Linux (PC)</label>
+                <label><input type="checkbox" name="platforms" value="playstation"> PlayStation (Console)</label>
+                <label><input type="checkbox" name="platforms" value="xbox"> Xbox (Console)</label>
+                <label><input type="checkbox" name="platforms" value="switch"> Nintendo Switch (Console)</label>
+                <label><input type="checkbox" name="platforms" value="web"> Web-based</label>
+                <label><input type="checkbox" name="platforms" value="vr"> VR Platforms</label>
+                <label><input type="checkbox" name="platforms" value="ar"> AR Platforms</label>
+            </div>
+
+            <label for="gameGenre">Select the primary genre of your game:
+                <span class="tooltip">ℹ️
+                    <span class="tooltiptext">Choose the genre that best describes your game.</span>
+                </span>
+            </label>
+            <select id="gameGenre">
+                <option value="">Select an option</option>
+                <option value="action">Action</option>
+                <option value="adventure">Adventure</option>
+                <option value="rpg">RPG</option>
+                <option value="strategy">Strategy</option>
+                <option value="simulation">Simulation</option>
+                <option value="sports">Sports</option>
+                <option value="puzzle">Puzzle</option>
+                <option value="horror">Horror</option>
+                <option value="platformer">Platformer</option>
+                <option value="sandbox">Sandbox/Open World</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+
+        <!-- Step 3: Graphics + Artwork -->
+        <div class="step" id="step-3">
+            <label>What level of graphics quality are you aiming for?
+                <span class="tooltip">ℹ️
+                    <span class="tooltiptext">Select the desired visual quality for your game assets.</span>
+                </span>
+            </label>
+            <div class="radio-group">
+                <label><input type="radio" name="graphics" value="low"> Low (2D, simple designs)</label>
+                <label><input type="radio" name="graphics" value="medium"> Medium (3D or more complex 2D)</label>
+                <label><input type="radio" name="graphics" value="high"> High (Advanced, high detail)</label>
+            </div>
+
+            <label>Specify approximate artwork quantities:
+                <span class="tooltip">ℹ️
+                    <span class="tooltiptext">Indicate how many custom characters, custom objects, environments, and UI assets you anticipate.</span>
+                </span>
+            </label>
+            <div>
+                <label for="customCharacters">Number of Custom Characters:</label>
+                <input type="number" id="customCharacters" min="0" value="0">
+            </div>
+            <div>
+                <label for="customObjects">Number of Custom Objects:</label>
+                <input type="number" id="customObjects" min="0" value="0">
+            </div>
+            <div>
+                <label for="environments">Number of Environments:</label>
+                <input type="number" id="environments" min="0" value="0">
+            </div>
+            <div>
+                <label for="uiAssets">Number of UI Assets:</label>
+                <input type="number" id="uiAssets" min="0" value="0">
+            </div>
+        </div>
+
+        <!-- Step 4: Sound & Music + Features -->
+        <div class="step" id="step-4">
+            <label>Sound and music requirements:
+                <span class="tooltip">ℹ️
+                    <span class="tooltiptext">Do you need custom sound effects, background music, voice-over, etc.?</span>
+                </span>
+            </label>
+            <div class="checkbox-group">
+                <label><input type="checkbox" name="sound" value="soundEffects"> Custom Sound Effects</label>
+                <label><input type="checkbox" name="sound" value="backgroundMusic"> Background Music</label>
+                <label><input type="checkbox" name="sound" value="voiceActing"> Voice Acting</label>
+                <label><input type="checkbox" name="sound" value="none"> No Sound Requirements</label>
+            </div>
+
+            <label>Which features would you like to include?
+                <span class="tooltip">ℹ️
+                    <span class="tooltiptext">Select all features relevant to your game.</span>
+                </span>
+            </label>
+            <div class="checkbox-group">
+                <label><input type="checkbox" name="features" value="multiplayer"> Multiplayer Mode</label>
+                <label><input type="checkbox" name="features" value="inAppPurchases"> In-App Purchases</label>
+                <label><input type="checkbox" name="features" value="leaderboards"> Leaderboards</label>
+                <label><input type="checkbox" name="features" value="achievements"> Achievements</label>
+                <label><input type="checkbox" name="features" value="vrSupport"> VR Support</label>
+                <label><input type="checkbox" name="features" value="arSupport"> AR Support</label>
+                <label><input type="checkbox" name="features" value="crossPlatform"> Cross-Platform Multiplayer</label>
+                <label><input type="checkbox" name="features" value="cloudSaving"> Cloud Saving</label>
+                <label><input type="checkbox" name="features" value="socialIntegration"> Social Media Integration</label>
+            </div>
+        </div>
+
+        <!-- Step 5: AI Complexity + Additional Services -->
+        <div class="step" id="step-5">
+            <label>What level of AI complexity do you require?
+                <span class="tooltip">ℹ️
+                    <span class="tooltiptext">Determine the sophistication of AI behaviors in your game.</span>
+                </span>
+            </label>
+            <div class="radio-group">
+                <label><input type="radio" name="ai" value="simple"> Simple (Basic behaviors)</label>
+                <label><input type="radio" name="ai" value="moderate"> Moderate (Advanced behaviors)</label>
+                <label><input type="radio" name="ai" value="complex"> Complex (Adaptive and learning AI)</label>
+            </div>
+
+            <label>Additional services needed?
+                <span class="tooltip">ℹ️
+                    <span class="tooltiptext">Analytics, marketing, cloud services, etc.</span>
+                </span>
+            </label>
+            <div class="checkbox-group">
+                <label><input type="checkbox" name="services" value="marketing"> Marketing & Publishing Support</label>
+                <label><input type="checkbox" name="services" value="analytics"> Analytics Integration</label>
+                <label><input type="checkbox" name="services" value="cloud"> Cloud / Server Infrastructure</label>
+                <label><input type="checkbox" name="services" value="liveOps"> Live Ops / Ongoing Events</label>
+                <label><input type="checkbox" name="services" value="localization"> Localization (Multiple Languages)</label>
+            </div>
+        </div>
+
+        <!-- Step 6: Timeline -->
+        <div class="step" id="step-6">
+            <label for="timeline">What is your expected timeline for development?
+                <span class="tooltip">ℹ️
+                    <span class="tooltiptext">Choose the desired timeframe for your game's completion.</span>
+                </span>
+            </label>
+            <select id="timeline">
+                <option value="">Select an option</option>
+                <option value="3">3 months</option>
+                <option value="6">6 months</option>
+                <option value="9">9 months</option>
+                <option value="12">12 months</option>
+                <option value="12+">More than 12 months</option>
+            </select>
+        </div>
+
+        <!-- Step 7: Result (Displayed after step 6) -->
+        <div class="step" id="result">
+            <div class="result">
+                <h2>Your Estimated Quote</h2>
+                <p id="quote"></p>
+                <div class="breakdown" id="breakdown">
+                    <!-- Detailed breakdown will be inserted here -->
+                </div>
+                <button onclick="restart()">Get Another Quote</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Buttons -->
+    <div class="navigation">
+        <button id="prevBtn" onclick="prevStep()" disabled>Previous</button>
+        <button id="nextBtn" onclick="nextStep()">Next</button>
+    </div>
+</div>
+
+<script>
+/*
+  JavaScript for the reorganized Unity Game Development Quote Calculator
+  with 2D/3D split at Step 1 and consolidated steps to reduce dead space.
+*/
+
+let currentStep = 1;
+// We have 6 input steps + 1 result step
+const totalSteps = 6;
+
+// We'll store user choices in formData, breakdown items in costBreakdown
+const formData = {};
+const costBreakdown = {};
+
+// Initialize the first step
+showStep(currentStep);
+
+/** Moves to the next step or shows the result if at the end. */
+function nextStep() {
+    if (!validateStep(currentStep)) {
+        alert('Please complete the required fields for Step ' + currentStep);
+        return;
+    }
+    saveData(currentStep);
+    if (currentStep < totalSteps) {
+        currentStep++;
+        showStep(currentStep);
+    } else {
+        // Show result after last step
+        currentStep++;
+        showStep(currentStep);
+    }
+}
+
+/** Moves to the previous step. */
+function prevStep() {
+    if (currentStep > 1) {
+        currentStep--;
+        showStep(currentStep);
+    }
+}
+
+/** Shows a given step by ID and updates progress bar & button states. */
+function showStep(step) {
+    // Hide all steps
+    for (let i = 1; i <= totalSteps; i++) {
+        document.getElementById('step-' + i).classList.remove('active');
+        document.getElementById('progress-' + i).classList.remove('active');
+    }
+    // If within input steps
+    if (step <= totalSteps) {
+        document.getElementById('step-' + step).classList.add('active');
+        document.getElementById('progress-' + step).classList.add('active');
+
+        // Enable/disable the Prev button
+        document.getElementById('prevBtn').disabled = (step === 1);
+
+        // Update Next button text
+        document.getElementById('nextBtn').innerText = (step === totalSteps) ? 'Calculate' : 'Next';
+    } else {
+        // Show result screen
+        calculateQuote();
+
+        // Hide input steps
+        for (let i = 1; i <= totalSteps; i++) {
+            document.getElementById('step-' + i).classList.remove('active');
+        }
+        document.getElementById('result').classList.add('active');
+        // Hide navigation
+        document.querySelector('.navigation').style.display = 'none';
+    }
+}
+
+/** Validates required fields for each step. */
+function validateStep(step) {
+    switch(step) {
+        case 1:
+            // Must choose 2D or 3D
+            const dimension = document.querySelector('input[name="dimension"]:checked');
+            return !!dimension;
+        case 2:
+            // Must choose at least 1 platform and a gameGenre
+            const platforms = document.querySelectorAll('input[name="platforms"]:checked');
+            const gameGenre = document.getElementById('gameGenre').value;
+            return platforms.length > 0 && gameGenre !== '';
+        case 3:
+            // Must pick graphics radio, and ensure numeric fields are valid
+            const graphics = document.querySelector('input[name="graphics"]:checked');
+            const chars = document.getElementById('customCharacters').value;
+            const objs = document.getElementById('customObjects').value;
+            const envs = document.getElementById('environments').value;
+            const ui = document.getElementById('uiAssets').value;
+            if (!graphics) return false;
+            if (chars === '' || objs === '' || envs === '' || ui === '') return false;
+            return parseInt(chars) >= 0 && parseInt(objs) >= 0 && parseInt(envs) >= 0 && parseInt(ui) >= 0;
+        case 4:
+            // Must choose at least 1 sound option, and can pick any features
+            const sound = document.querySelectorAll('input[name="sound"]:checked');
+            return sound.length > 0; // features are optional
+        case 5:
+            // Must pick an AI complexity; additional services are optional
+            const ai = document.querySelector('input[name="ai"]:checked');
+            return !!ai;
+        case 6:
+            // Must pick a timeline
+            const timeline = document.getElementById('timeline').value;
+            return timeline !== '';
+        default:
+            return false;
+    }
+}
+
+/** Saves user inputs from the current step into formData. */
+function saveData(step) {
+    switch(step) {
+        case 1:
+            formData.dimension = document.querySelector('input[name="dimension"]:checked').value;
+            break;
+        case 2:
+            formData.platforms = Array.from(document.querySelectorAll('input[name="platforms"]:checked'))
+                                      .map(el => el.value);
+            formData.gameGenre = document.getElementById('gameGenre').value;
+            break;
+        case 3:
+            formData.graphics = document.querySelector('input[name="graphics"]:checked').value;
+            formData.customCharacters = parseInt(document.getElementById('customCharacters').value);
+            formData.customObjects = parseInt(document.getElementById('customObjects').value);
+            formData.environments = parseInt(document.getElementById('environments').value);
+            formData.uiAssets = parseInt(document.getElementById('uiAssets').value);
+            break;
+        case 4:
+            formData.sound = Array.from(document.querySelectorAll('input[name="sound"]:checked'))
+                                  .map(el => el.value);
+            formData.features = Array.from(document.querySelectorAll('input[name="features"]:checked'))
+                                    .map(el => el.value);
+            break;
+        case 5:
+            formData.ai = document.querySelector('input[name="ai"]:checked').value;
+            formData.services = Array.from(document.querySelectorAll('input[name="services"]:checked'))
+                                     .map(el => el.value);
+            break;
+        case 6:
+            formData.timeline = document.getElementById('timeline').value;
+            break;
+    }
+}
+
+/** Final quote calculation using stored formData. */
+function calculateQuote() {
+    // Start with a lower base cost
+    let quote = 5000;
+    costBreakdown['Base Price'] = '$5,000';
+
+    // 2D or 3D cost difference
+    if (formData.dimension === '3d') {
+        // Add an extra cost for 3D pipeline
+        quote += 3000;
+        costBreakdown['3D Game Add-On'] = '$3,000';
+    } else {
+        costBreakdown['2D Game'] = '$0';
+    }
+
+    // Platforms cost
+    const platformCosts = {
+        ios: 2000,
+        android: 2000,
+        windows: 2500,
+        macos: 2500,
+        linux: 2500,
+        playstation: 4000,
+        xbox: 4000,
+        switch: 4000,
+        web: 1500,
+        vr: 5000,
+        ar: 4000
+    };
+    let totalPlatformCost = 0;
+    formData.platforms.forEach(plat => {
+        totalPlatformCost += (platformCosts[plat] || 0);
+    });
+    if (totalPlatformCost > 0) {
+        quote += totalPlatformCost;
+        costBreakdown['Target Platforms'] = `$${formatNumber(totalPlatformCost)}`;
+    }
+
+    // Genre cost
+    const genreCosts = {
+        action: 1200,
+        adventure: 1000,
+        rpg: 1500,
+        strategy: 1200,
+        simulation: 1000,
+        sports: 800,
+        puzzle: 600,
+        horror: 700,
+        platformer: 700,
+        sandbox: 1500,
+        other: 600
+    };
+    if (genreCosts[formData.gameGenre]) {
+        quote += genreCosts[formData.gameGenre];
+        costBreakdown[`Game Genre (${capitalize(formData.gameGenre)})`] = `$${formatNumber(genreCosts[formData.gameGenre])}`;
+    }
+
+    // Graphics quality
+    const graphicsMap = {
+        low: 500,
+        medium: 1500,
+        high: 3000
+    };
+    if (graphicsMap[formData.graphics]) {
+        quote += graphicsMap[formData.graphics];
+        costBreakdown[`Graphics Quality (${capitalize(formData.graphics)})`] = `$${formatNumber(graphicsMap[formData.graphics])}`;
+    }
+
+    // Artwork
+    // Custom Characters cost
+    const charCost = (formData.customCharacters || 0) * 300;
+    if (charCost > 0) {
+        quote += charCost;
+        costBreakdown[`Artwork - Custom Characters (${formData.customCharacters})`] = `$${formatNumber(charCost)}`;
+    }
+    // Custom Objects cost
+    const objCost = (formData.customObjects || 0) * 250; // Added per-object cost
+    if (objCost > 0) {
+        quote += objCost;
+        costBreakdown[`Artwork - Custom Objects (${formData.customObjects})`] = `$${formatNumber(objCost)}`;
+    }
+    // Environments cost
+    const envCost = (formData.environments || 0) * 500;
+    if (envCost > 0) {
+        quote += envCost;
+        costBreakdown[`Artwork - Environments (${formData.environments})`] = `$${formatNumber(envCost)}`;
+    }
+    // UI Assets cost
+    const uiCost = (formData.uiAssets || 0) * 200;
+    if (uiCost > 0) {
+        quote += uiCost;
+        costBreakdown[`Artwork - UI Assets (${formData.uiAssets})`] = `$${formatNumber(uiCost)}`;
+    }
+
+    // Sound & Music
+    formData.sound.forEach(snd => {
+        switch (snd) {
+            case 'soundEffects':
+                quote += 600;
+                costBreakdown['Sound - Custom Sound Effects'] = '$600';
+                break;
+            case 'backgroundMusic':
+                quote += 800;
+                costBreakdown['Sound - Background Music'] = '$800';
+                break;
+            case 'voiceActing':
+                quote += 1000;
+                costBreakdown['Sound - Voice Acting'] = '$1,000';
+                break;
+            case 'none':
+                costBreakdown['Sound - No Sound Requirements'] = '$0';
+                break;
+        }
+    });
+
+    // Features
+    formData.features.forEach(ft => {
+        switch (ft) {
+            case 'multiplayer':
+                quote += 1500;
+                costBreakdown['Feature - Multiplayer Mode'] = '$1,500';
+                break;
+            case 'inAppPurchases':
+                quote += 700;
+                costBreakdown['Feature - In-App Purchases'] = '$700';
+                break;
+            case 'leaderboards':
+                quote += 500;
+                costBreakdown['Feature - Leaderboards'] = '$500';
+                break;
+            case 'achievements':
+                quote += 400;
+                costBreakdown['Feature - Achievements'] = '$400';
+                break;
+            case 'vrSupport':
+                quote += 2000;
+                costBreakdown['Feature - VR Support'] = '$2,000';
+                break;
+            case 'arSupport':
+                quote += 1500;
+                costBreakdown['Feature - AR Support'] = '$1,500';
+                break;
+            case 'crossPlatform':
+                quote += 1200;
+                costBreakdown['Feature - Cross-Platform Multiplayer'] = '$1,200';
+                break;
+            case 'cloudSaving':
+                quote += 600;
+                costBreakdown['Feature - Cloud Saving'] = '$600';
+                break;
+            case 'socialIntegration':
+                quote += 400;
+                costBreakdown['Feature - Social Media Integration'] = '$400';
+                break;
+        }
+    });
+
+    // AI Complexity
+    switch(formData.ai) {
+        case 'simple':
+            quote += 500;
+            costBreakdown['AI Complexity (Simple)'] = '$500';
+            break;
+        case 'moderate':
+            quote += 1500;
+            costBreakdown['AI Complexity (Moderate)'] = '$1,500';
+            break;
+        case 'complex':
+            quote += 3000;
+            costBreakdown['AI Complexity (Complex)'] = '$3,000';
+            break;
+    }
+
+    // Additional Services
+    if (formData.services && formData.services.length > 0) {
+        formData.services.forEach(svc => {
+            switch(svc) {
+                case 'marketing':
+                    quote += 800;
+                    costBreakdown['Service - Marketing & Publishing'] = '$800';
+                    break;
+                case 'analytics':
+                    quote += 600;
+                    costBreakdown['Service - Analytics Integration'] = '$600';
+                    break;
+                case 'cloud':
+                    quote += 700;
+                    costBreakdown['Service - Cloud / Server'] = '$700';
+                    break;
+                case 'liveOps':
+                    quote += 900;
+                    costBreakdown['Service - Live Ops'] = '$900';
+                    break;
+                case 'localization':
+                    quote += 500;
+                    costBreakdown['Service - Localization'] = '$500';
+                    break;
+            }
+        });
+    }
+
+    // Timeline
+    switch(formData.timeline) {
+        case '3':
+            quote += 1500;
+            costBreakdown['Timeline (3 months)'] = '$1,500';
+            break;
+        case '6':
+            quote += 1000;
+            costBreakdown['Timeline (6 months)'] = '$1,000';
+            break;
+        case '9':
+            quote += 700;
+            costBreakdown['Timeline (9 months)'] = '$700';
+            break;
+        case '12':
+            quote += 400;
+            costBreakdown['Timeline (12 months)'] = '$400';
+            break;
+        case '12+':
+            costBreakdown['Timeline (More than 12 months)'] = '$0';
+            break;
+    }
+
+    // Ensure a minimum
+    if (quote < 4000) {
+        quote = 4000;
+        costBreakdown['Minimum Quote Adjustment'] = '$4,000';
+    }
+
+    // Display final quote
+    document.getElementById('quote').innerText =
+        `Your estimated game development cost is $${formatNumber(quote)} USD.`;
+
+    // Show breakdown
+    let breakdownHTML = '<strong>Cost Breakdown:</strong><table>';
+    breakdownHTML += '<tr><th>Item</th><th>Cost (USD)</th></tr>';
+    for (let item in costBreakdown) {
+        breakdownHTML += `<tr><td>${item}</td><td>${costBreakdown[item]}</td></tr>`;
+    }
+    breakdownHTML += '</table>';
+    document.getElementById('breakdown').innerHTML = breakdownHTML;
+}
+
+/** Utility to format big numbers with commas. */
+function formatNumber(num) {
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+/** Capitalizes the first letter of a string */
+function capitalize(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+/** Resets everything for a new quote. */
+function restart() {
+    // Reset step
+    currentStep = 1;
+
+    // Clear out formData and costBreakdown
+    for (let key in formData) delete formData[key];
+    for (let key in costBreakdown) delete costBreakdown[key];
+
+    // Reset all inputs
+    document.querySelectorAll('input[type="radio"], input[type="checkbox"]').forEach(el => {
+        el.checked = false;
+    });
+    document.getElementById('gameGenre').value = '';
+    document.getElementById('customCharacters').value = '0';
+    document.getElementById('customObjects').value = '0';
+    document.getElementById('environments').value = '0';
+    document.getElementById('uiAssets').value = '0';
+    document.getElementById('timeline').value = '';
+
+    // Reset quote display
+    document.getElementById('quote').innerText = '';
+    document.getElementById('breakdown').innerHTML = '';
+
+    // Show navigation again
+    document.querySelector('.navigation').style.display = 'flex';
+    // Show first step
+    showStep(currentStep);
+}
+</script>
+
+</body>
+</html>
